@@ -1,0 +1,7 @@
+# CRES: Character Relation Extraction System
+# Python Dependencies for Standalone Execution & NetworkX Analysis
+
+networkx>=3.0
+matplotlib>=3.7.0
+google-genai>=2.4.0
+python-dotenv>=1.0.0

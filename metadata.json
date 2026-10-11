@@ -1,0 +1,6 @@
+{
+  "name": "CRES - Character Relation Extraction System",
+  "description": "Multi-stage NLP pipeline for extracting character-relationship knowledge graphs, coreference resolution, interaction networks, and graph analytics from narrative text.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
