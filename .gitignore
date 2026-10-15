@@ -1,8 +1,45 @@
+# Node dependencies & builds
 node_modules/
 build/
 dist/
 coverage/
-.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 *.log
-.env*
+
+# Environment variables
+.env
+.env.*
 !.env.example
+
+# Python virtual environment & bytecode
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# Large model binaries & checkpoints (>100MB, keep code/configs in repo)
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+*.zip
+*.tar.gz
+cres-flan-t5-literary-re/model.safetensors
+
+# Downloaded test PDFs & local test outputs
+*.pdf
+character_graph.png
+cres_eval_results.json
+cres_confusion_matrix.png
+
+# Operating system & IDE artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

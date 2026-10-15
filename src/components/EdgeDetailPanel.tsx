@@ -20,16 +20,42 @@ export const EdgeDetailPanel: React.FC<EdgeDetailPanelProps> = ({
 
   if (!sourceChar || !targetChar) return null;
 
-  const relationBadgeColors: Record<string, { bg: string; text: string; border: string }> = {
-    kinship: { bg: 'bg-emerald-950/80', text: 'text-emerald-300', border: 'border-emerald-700' },
-    romantic: { bg: 'bg-rose-950/80', text: 'text-rose-300', border: 'border-rose-700' },
-    adversarial: { bg: 'bg-red-950/80', text: 'text-red-300', border: 'border-red-700' },
-    hierarchical: { bg: 'bg-amber-950/80', text: 'text-amber-300', border: 'border-amber-700' },
-    alliance: { bg: 'bg-cyan-950/80', text: 'text-cyan-300', border: 'border-cyan-700' },
-    neutral_interaction: { bg: 'bg-slate-800', text: 'text-slate-300', border: 'border-slate-700' },
+  // Display-group → badge color config
+  const GROUP_BADGE: Record<string, { bg: string; text: string; border: string }> = {
+    kinship             : { bg: 'bg-emerald-950/80', text: 'text-emerald-300', border: 'border-emerald-700' },
+    romantic            : { bg: 'bg-rose-950/80',    text: 'text-rose-300',    border: 'border-rose-700'    },
+    adversarial         : { bg: 'bg-red-950/80',     text: 'text-red-300',     border: 'border-red-700'     },
+    hierarchical        : { bg: 'bg-amber-950/80',   text: 'text-amber-300',   border: 'border-amber-700'   },
+    alliance            : { bg: 'bg-cyan-950/80',    text: 'text-cyan-300',    border: 'border-cyan-700'    },
+    neutral_interaction : { bg: 'bg-slate-800',      text: 'text-slate-300',   border: 'border-slate-700'   },
   };
 
-  const badge = relationBadgeColors[edge.relationType] || relationBadgeColors.neutral_interaction;
+  // Resolve display group from fine-grained label
+  const FINE_TO_GROUP: Record<string, string> = {
+    sibling: 'kinship', 'parent-child': 'kinship', spouse: 'kinship',
+    family: 'kinship', cousin: 'kinship', kin: 'kinship',
+    romantic: 'romantic', 'love-interest': 'romantic', betrothed: 'romantic',
+    enemy: 'adversarial', rival: 'adversarial', antagonist: 'adversarial', foe: 'adversarial',
+    'employer-employee': 'hierarchical', 'master-servant': 'hierarchical',
+    'mentor-student': 'hierarchical', 'lawyer-client': 'hierarchical',
+    friend: 'alliance', ally: 'alliance', confidant: 'alliance', comrade: 'alliance',
+    acquaintance: 'neutral_interaction', 'no-relation': 'neutral_interaction',
+    neutral_interaction: 'neutral_interaction',
+  };
+
+  function resolveGroup(fine: string): string {
+    const k = fine.toLowerCase().trim();
+    if (FINE_TO_GROUP[k]) return FINE_TO_GROUP[k];
+    if (k.includes('sib') || k.includes('parent') || k.includes('child') || k.includes('spous')) return 'kinship';
+    if (k.includes('love') || k.includes('roman') || k.includes('fianc')) return 'romantic';
+    if (k.includes('enem') || k.includes('rival') || k.includes('antag') || k.includes('advers')) return 'adversarial';
+    if (k.includes('employ') || k.includes('serv') || k.includes('mentor')) return 'hierarchical';
+    if (k.includes('friend') || k.includes('ally') || k.includes('confid')) return 'alliance';
+    return 'neutral_interaction';
+  }
+
+  const displayGroup = resolveGroup(edge.relationType);
+  const badge = GROUP_BADGE[displayGroup] || GROUP_BADGE.neutral_interaction;
 
   return (
     <div className="h-full flex flex-col bg-slate-900 border-l border-slate-800 text-slate-100 overflow-y-auto w-80 lg:w-96 shadow-2xl">
@@ -64,14 +90,16 @@ export const EdgeDetailPanel: React.FC<EdgeDetailPanelProps> = ({
       <div className="p-4 space-y-5 flex-1">
         {/* Classification Badge & Summary */}
         <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            {/* Fine-grained label — primary */}
             <span
               className={`text-xs font-semibold px-2.5 py-1 rounded-full border capitalize ${badge.bg} ${badge.text} ${badge.border}`}
             >
-              {edge.relationType.replace('_', ' ')}
+              {edge.relationType.replace(/-/g, '‑').replace(/_/g, ' ')}
             </span>
-            <span className="text-[11px] text-slate-400 capitalize font-mono">
-              {edge.directionality} edge
+            {/* Display group — secondary dim indicator */}
+            <span className="text-[10px] text-slate-500 font-mono capitalize">
+              {displayGroup.replace('_', ' ')} · {edge.directionality}
             </span>
           </div>
           <p className="text-xs text-slate-300 leading-relaxed italic">{edge.summary}</p>

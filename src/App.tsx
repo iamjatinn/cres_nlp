@@ -10,14 +10,13 @@ import { NetworkGraph } from './components/NetworkGraph';
 import { NodeDetailPanel } from './components/NodeDetailPanel';
 import { EdgeDetailPanel } from './components/EdgeDetailPanel';
 import { TableInspector } from './components/TableInspector';
-import { PythonExportView } from './components/PythonExportView';
 import { StoryEditorModal } from './components/StoryEditorModal';
-import { AlertCircle, CheckCircle2, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function App() {
   const [currentText, setCurrentText] = useState<string>(SAMPLE_STORIES[0].text);
   const [storyTitle, setStoryTitle] = useState<string>(SAMPLE_STORIES[0].title);
-  const [activeView, setActiveView] = useState<'graph' | 'table' | 'python'>('graph');
+  const [activeView, setActiveView] = useState<'graph' | 'table'>('graph');
 
   // Selected node or edge in graph
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
@@ -212,13 +211,6 @@ export default function App() {
               }}
             />
           )}
-
-          {activeView === 'python' && (
-            <PythonExportView
-              characters={characters}
-              relationships={relationships}
-            />
-          )}
         </main>
 
         {/* Side Panels */}
@@ -254,10 +246,10 @@ export default function App() {
         currentText={currentText}
         isOpen={isStoryEditorOpen}
         onClose={() => setIsStoryEditorOpen(false)}
-        onRunPipeline={(newText) => {
+        onRunPipeline={async (newText) => {
           const matched = SAMPLE_STORIES.find((s) => s.text === newText);
           setStoryTitle(matched ? matched.title : 'Custom Story');
-          runExtraction(newText);
+          await runExtraction(newText);
         }}
         isLoading={isLoading}
       />

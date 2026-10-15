@@ -3,7 +3,7 @@ import * as d3 from 'd3';
 import {
   CharacterNode,
   RelationshipEdge,
-  RelationCategory,
+  DisplayGroup,
   CommunityGroup,
 } from '../types/cres';
 import {
@@ -26,14 +26,70 @@ interface NetworkGraphProps {
   onSelectEdge: (edgeId: string | null) => void;
 }
 
-const RELATION_COLORS: Record<RelationCategory, string> = {
-  kinship: '#10b981', // Emerald
-  romantic: '#f43f5e', // Rose
-  adversarial: '#ef4444', // Red
-  hierarchical: '#f59e0b', // Amber
-  alliance: '#06b6d4', // Cyan
-  neutral_interaction: '#64748b', // Slate
+// ── Display-group colors (used for edge coloring) ────────────────────────────
+const GROUP_COLORS: Record<DisplayGroup, string> = {
+  kinship             : '#10b981', // Emerald
+  romantic            : '#f43f5e', // Rose
+  adversarial         : '#ef4444', // Red
+  hierarchical        : '#f59e0b', // Amber
+  alliance            : '#06b6d4', // Cyan
+  neutral_interaction : '#64748b', // Slate
 };
+
+// ── Fine-grained → display-group mapping ─────────────────────────────────────
+// Covers the most common dataset labels; unknown labels fall back by substring.
+const FINE_TO_GROUP: Record<string, DisplayGroup> = {
+  // kinship
+  sibling: 'kinship', 'parent-child': 'kinship', spouse: 'kinship',
+  family: 'kinship', kin: 'kinship', cousin: 'kinship',
+  'aunt-nephew': 'kinship', 'uncle-niece': 'kinship',
+  'grandparent-child': 'kinship', 'half-sibling': 'kinship',
+  'step-parent': 'kinship', 'step-child': 'kinship',
+  // romantic
+  romantic: 'romantic', 'love-interest': 'romantic',
+  betrothed: 'romantic', 'former-lovers': 'romantic', fiancee: 'romantic',
+  // adversarial
+  enemy: 'adversarial', rival: 'adversarial', antagonist: 'adversarial',
+  nemesis: 'adversarial', adversary: 'adversarial', foe: 'adversarial',
+  // hierarchical
+  'employer-employee': 'hierarchical', 'master-servant': 'hierarchical',
+  'mentor-student': 'hierarchical', 'lawyer-client': 'hierarchical',
+  'doctor-patient': 'hierarchical', 'lord-subject': 'hierarchical',
+  // alliance
+  friend: 'alliance', ally: 'alliance', confidant: 'alliance',
+  comrade: 'alliance', companion: 'alliance', partner: 'alliance',
+  // neutral
+  acquaintance: 'neutral_interaction', 'no-relation': 'neutral_interaction',
+  colleague: 'neutral_interaction', neutral_interaction: 'neutral_interaction',
+};
+
+/** Resolve display group for any fine-grained label. */
+function getDisplayGroup(fineLabel: string): DisplayGroup {
+  const key = fineLabel.toLowerCase().trim();
+  if (FINE_TO_GROUP[key]) return FINE_TO_GROUP[key];
+  // substring fallbacks
+  if (key.includes('sib') || key.includes('parent') || key.includes('child')
+      || key.includes('spouse') || key.includes('kin') || key.includes('cousin'))
+    return 'kinship';
+  if (key.includes('love') || key.includes('roman') || key.includes('betroth')
+      || key.includes('fianc'))
+    return 'romantic';
+  if (key.includes('enem') || key.includes('rival') || key.includes('antag')
+      || key.includes('foe') || key.includes('advers'))
+    return 'adversarial';
+  if (key.includes('employ') || key.includes('serv') || key.includes('master')
+      || key.includes('mentor') || key.includes('hierarch'))
+    return 'hierarchical';
+  if (key.includes('friend') || key.includes('ally') || key.includes('confid')
+      || key.includes('alliance') || key.includes('comrade'))
+    return 'alliance';
+  return 'neutral_interaction';
+}
+
+/** Resolve hex color for any fine-grained label. */
+function getRelationColor(fineLabel: string): string {
+  return GROUP_COLORS[getDisplayGroup(fineLabel)];
+}
 
 interface D3Node extends d3.SimulationNodeDatum, CharacterNode {}
 
@@ -41,7 +97,7 @@ interface D3Link extends d3.SimulationLinkDatum<D3Node> {
   id: string;
   source: D3Node | string;
   target: D3Node | string;
-  relationType: RelationCategory;
+  relationType: string;   // fine-grained label
   weight: number;
   sentiment: number;
   directionality: string;
@@ -92,12 +148,12 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
-    // Defs for arrowheads
+    // Defs for arrowheads — one per display group
     const defs = svg.append('defs');
-    Object.entries(RELATION_COLORS).forEach(([type, color]) => {
+    Object.entries(GROUP_COLORS).forEach(([group, color]) => {
       defs
         .append('marker')
-        .attr('id', `arrow-${type}`)
+        .attr('id', `arrow-${group}`)
         .attr('viewBox', '0 -5 10 10')
         .attr('refX', 22)
         .attr('refY', 0)
@@ -153,10 +209,10 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
       .data(simLinks, (d) => d.id)
       .enter()
       .append('line')
-      .attr('stroke', (d) => RELATION_COLORS[d.relationType] || '#64748b')
+      .attr('stroke', (d) => getRelationColor(d.relationType))
       .attr('stroke-width', (d) => Math.max(1.5, Math.min(6, 1 + (d.weight || 1) * 0.8)))
       .attr('stroke-opacity', 0.6)
-      .attr('stroke-dasharray', (d) => (d.relationType === 'adversarial' ? '4,4' : 'none'))
+      .attr('stroke-dasharray', (d) => getDisplayGroup(d.relationType) === 'adversarial' ? '4,4' : 'none')
       .attr('cursor', 'pointer')
       .on('click', (event, d) => {
         event.stopPropagation();
@@ -410,14 +466,14 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
         <svg ref={svgRef} className="w-full h-full bg-slate-950" />
       </div>
 
-      {/* Bottom Legend */}
+      {/* Bottom Legend — shows display groups for color reference */}
       <div className="absolute bottom-3 left-3 right-3 z-10 flex items-center justify-between pointer-events-none">
         <div className="flex flex-wrap items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-800 pointer-events-auto text-[11px]">
-          <span className="text-[10px] font-bold text-slate-400 uppercase">Relations:</span>
-          {Object.entries(RELATION_COLORS).map(([type, color]) => (
-            <div key={type} className="flex items-center gap-1 text-slate-300 capitalize">
+          <span className="text-[10px] font-bold text-slate-400 uppercase">Relation groups:</span>
+          {Object.entries(GROUP_COLORS).map(([group, color]) => (
+            <div key={group} className="flex items-center gap-1 text-slate-300 capitalize">
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-              <span>{type.replace('_', ' ')}</span>
+              <span>{group.replace('_', ' ')}</span>
             </div>
           ))}
         </div>

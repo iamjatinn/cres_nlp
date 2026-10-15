@@ -2,16 +2,14 @@ import React from 'react';
 import {
   Network,
   ListFilter,
-  FileCode,
   BookOpen,
-  Sparkles,
   RefreshCw,
   Share2,
 } from 'lucide-react';
 
 interface HeaderProps {
-  activeView: 'graph' | 'table' | 'python';
-  setActiveView: (view: 'graph' | 'table' | 'python') => void;
+  activeView: 'graph' | 'table';
+  setActiveView: (view: 'graph' | 'table') => void;
   storyTitle: string;
   charactersCount: number;
   relationshipsCount: number;
@@ -78,18 +76,6 @@ export const Header: React.FC<HeaderProps> = ({
           <ListFilter className="w-3.5 h-3.5" />
           <span>Characters & Relations</span>
         </button>
-
-        <button
-          onClick={() => setActiveView('python')}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-            activeView === 'python'
-              ? 'bg-indigo-600 text-white shadow'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <FileCode className="w-3.5 h-3.5" />
-          <span>Python & NetworkX</span>
-        </button>
       </nav>
 
       {/* Right Story Selector & Run */}
@@ -106,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={onRefresh}
           disabled={isLoading}
           className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          title="Re-extract with LLM"
+          title="Re-extract Relations with Local Model"
         >
           <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-indigo-400' : ''}`} />
         </button>

@@ -1,7 +1,17 @@
 # CRES: Character Relation Extraction System
-# Python Dependencies for Standalone Execution & NetworkX Analysis
-
+# Core Graph & PDF Parsing
 networkx>=3.0
 matplotlib>=3.7.0
-google-genai>=2.4.0
-python-dotenv>=1.0.0
+pypdf>=5.0.0
+
+# NLP Preprocessing Pipeline (Sentence Boundary, Tokenization, POS Tagging, WordNet Lemmatization & Semantics)
+nltk>=3.9.0
+
+# Model Fine-tuning, Local Inference & Evaluation (Flan-T5)
+transformers>=4.47.0
+sentencepiece>=0.2.0
+accelerate>=1.2.0
+torch>=2.0.0
+scikit-learn>=1.5.0
+bert-score>=0.3.13
+evaluate>=0.4.3

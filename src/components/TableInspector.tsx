@@ -17,14 +17,43 @@ export const TableInspector: React.FC<TableInspectorProps> = ({
 }) => {
   const [showHeatmap, setShowHeatmap] = useState<boolean>(true);
 
-  const relationBadgeColors: Record<string, string> = {
-    kinship: 'bg-emerald-950/70 border-emerald-700 text-emerald-300',
-    romantic: 'bg-rose-950/70 border-rose-700 text-rose-300',
-    adversarial: 'bg-red-950/70 border-red-700 text-red-300',
-    hierarchical: 'bg-amber-950/70 border-amber-700 text-amber-300',
-    alliance: 'bg-cyan-950/70 border-cyan-700 text-cyan-300',
-    neutral_interaction: 'bg-slate-800 border-slate-700 text-slate-300',
+  // Display-group → badge classes
+  const GROUP_BADGE: Record<string, string> = {
+    kinship             : 'bg-emerald-950/70 border-emerald-700 text-emerald-300',
+    romantic            : 'bg-rose-950/70 border-rose-700 text-rose-300',
+    adversarial         : 'bg-red-950/70 border-red-700 text-red-300',
+    hierarchical        : 'bg-amber-950/70 border-amber-700 text-amber-300',
+    alliance            : 'bg-cyan-950/70 border-cyan-700 text-cyan-300',
+    neutral_interaction : 'bg-slate-800 border-slate-700 text-slate-300',
   };
+
+  // Resolve display group from any fine-grained label
+  const FINE_TO_GROUP: Record<string, string> = {
+    sibling: 'kinship', 'parent-child': 'kinship', spouse: 'kinship',
+    family: 'kinship', cousin: 'kinship', kin: 'kinship',
+    romantic: 'romantic', 'love-interest': 'romantic', betrothed: 'romantic',
+    enemy: 'adversarial', rival: 'adversarial', antagonist: 'adversarial', foe: 'adversarial',
+    'employer-employee': 'hierarchical', 'master-servant': 'hierarchical',
+    'mentor-student': 'hierarchical', 'lawyer-client': 'hierarchical',
+    friend: 'alliance', ally: 'alliance', confidant: 'alliance', comrade: 'alliance',
+    acquaintance: 'neutral_interaction', 'no-relation': 'neutral_interaction',
+    neutral_interaction: 'neutral_interaction',
+  };
+
+  function resolveGroup(fine: string): string {
+    const k = fine.toLowerCase().trim();
+    if (FINE_TO_GROUP[k]) return FINE_TO_GROUP[k];
+    if (k.includes('sib') || k.includes('parent') || k.includes('child') || k.includes('spous')) return 'kinship';
+    if (k.includes('love') || k.includes('roman') || k.includes('fianc')) return 'romantic';
+    if (k.includes('enem') || k.includes('rival') || k.includes('antag') || k.includes('advers')) return 'adversarial';
+    if (k.includes('employ') || k.includes('serv') || k.includes('mentor')) return 'hierarchical';
+    if (k.includes('friend') || k.includes('ally') || k.includes('confid')) return 'alliance';
+    return 'neutral_interaction';
+  }
+
+  function getBadgeClass(fineLabel: string): string {
+    return GROUP_BADGE[resolveGroup(fineLabel)] || GROUP_BADGE.neutral_interaction;
+  }
 
   // Build lookup map for quick matrix lookup
   const edgeLookup = new Map<string, RelationshipEdge>();
@@ -211,10 +240,10 @@ export const TableInspector: React.FC<TableInspectorProps> = ({
                     <div className="flex items-center gap-1.5">
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded-full border capitalize font-medium ${
-                          relationBadgeColors[r.relationType] || 'bg-slate-800 text-slate-300'
+                          getBadgeClass(r.relationType)
                         }`}
                       >
-                        {r.relationType.replace('_', ' ')}
+                        {r.relationType.replace(/-/g, '\u2011').replace(/_/g, ' ')}
                       </span>
                       <span
                         className={`text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 ${

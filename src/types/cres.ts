@@ -1,10 +1,31 @@
-export type RelationCategory = 
-  | 'kinship' 
-  | 'romantic' 
-  | 'adversarial' 
-  | 'hierarchical' 
-  | 'alliance' 
+/**
+ * Fine-grained relation label — any string predicted by the model
+ * or derived by the algorithmic pipeline (e.g. 'sibling', 'friend', 'enemy').
+ */
+export type RelationCategory = string;
+
+/**
+ * Coarse display group used ONLY for edge color bucketing in the UI.
+ * Never stored as the primary label on an edge.
+ */
+export type DisplayGroup =
+  | 'kinship'
+  | 'romantic'
+  | 'adversarial'
+  | 'hierarchical'
+  | 'alliance'
   | 'neutral_interaction';
+
+/**
+ * Maps a fine-grained label to its display group + resolved color.
+ * Built at runtime from the model's cres_label_meta.json or the
+ * algorithmic pipeline's built-in FINE_TO_GROUP table.
+ */
+export interface RelationMeta {
+  fineLabel: string;
+  displayGroup: DisplayGroup;
+  color: string;
+}
 
 export type Directionality = 'directed' | 'undirected' | 'bidirectional';
 

@@ -37,20 +37,20 @@ DEFAULT_DATA = {
         {"canonicalName": "Elizabeth", "aliases": ["Elizabeth Blackwood"], "primaryRole": "Supporting"}
     ],
     "relationships": [
-        {"source": "Lord Sebastian Blackwood", "target": "Adrian Blackwood", "relationType": "kinship", "sentiment": 0.6, "weight": 5, "summary": "Uncle and nephew; Sebastian secretly protected Adrian."},
-        {"source": "Catherine", "target": "Adrian Blackwood", "relationType": "kinship", "sentiment": 0.4, "weight": 6, "summary": "Cousins navigating the estate mystery and secrets."},
-        {"source": "Lord Sebastian Blackwood", "target": "Catherine", "relationType": "kinship", "sentiment": 0.8, "weight": 4, "summary": "Adoptive father and daughter; principal heir of his will."},
-        {"source": "Margaret Blackwood", "target": "Thomas Ashford", "relationType": "kinship", "sentiment": -0.6, "weight": 7, "summary": "Unhappy marriage burdened by distrust, ending in separation."},
-        {"source": "Victor Hale", "target": "Lord Sebastian Blackwood", "relationType": "adversarial", "sentiment": -0.9, "weight": 6, "summary": "Former closest friends turned bitter enemies over property."},
-        {"source": "Isabella Moore", "target": "Daniel Cross", "relationType": "romantic", "sentiment": 0.7, "weight": 5, "summary": "Engaged couple defending each other through the murder probe."},
-        {"source": "Isabella Moore", "target": "Adrian Blackwood", "relationType": "romantic", "sentiment": 0.2, "weight": 4, "summary": "Past romantic history and mutual secret-keeping."},
-        {"source": "Inspector Robert Shaw", "target": "Grace Shaw", "relationType": "kinship", "sentiment": 0.7, "weight": 4, "summary": "Brother and sister; Grace confides the hidden vial."},
-        {"source": "Jonathan Blackwood", "target": "Lord Sebastian Blackwood", "relationType": "kinship", "sentiment": 0.1, "weight": 3, "summary": "Biological father and unacknowledged missing son."},
-        {"source": "Jonathan Blackwood", "target": "Laura Price", "relationType": "romantic", "sentiment": 0.8, "weight": 4, "summary": "Devoted husband and wife supporting each other."},
-        {"source": "Helen Ward", "target": "Daniel Cross", "relationType": "kinship", "sentiment": 0.3, "weight": 3, "summary": "Sister and brother on opposite sides of Victor's legal challenge."},
-        {"source": "Helen Ward", "target": "Victor Hale", "relationType": "hierarchical", "sentiment": -0.2, "weight": 4, "summary": "Attorney and client; Helen refuses unethical demands."},
-        {"source": "Margaret Blackwood", "target": "Catherine", "relationType": "kinship", "sentiment": 0.8, "weight": 5, "summary": "Aunt who lovingly raised Catherine as a second mother."},
-        {"source": "Eleanor Price", "target": "Lord Sebastian Blackwood", "relationType": "romantic", "sentiment": 0.3, "weight": 3, "summary": "Former fiancée and mother of Jonathan Blackwood."}
+        {"source": "Lord Sebastian Blackwood", "target": "Adrian Blackwood", "relationType": "uncle-nephew", "sentiment": 0.6, "weight": 5, "summary": "Uncle and nephew; Sebastian secretly protected Adrian."},
+        {"source": "Catherine", "target": "Adrian Blackwood", "relationType": "cousin", "sentiment": 0.4, "weight": 6, "summary": "Cousins navigating the estate mystery and secrets."},
+        {"source": "Lord Sebastian Blackwood", "target": "Catherine", "relationType": "adoptive-parent", "sentiment": 0.8, "weight": 4, "summary": "Adoptive father and daughter; principal heir of his will."},
+        {"source": "Margaret Blackwood", "target": "Thomas Ashford", "relationType": "spouse", "sentiment": -0.6, "weight": 7, "summary": "Unhappy marriage burdened by distrust, ending in separation."},
+        {"source": "Victor Hale", "target": "Lord Sebastian Blackwood", "relationType": "enemy", "sentiment": -0.9, "weight": 6, "summary": "Former closest friends turned bitter enemies over property."},
+        {"source": "Isabella Moore", "target": "Daniel Cross", "relationType": "betrothed", "sentiment": 0.7, "weight": 5, "summary": "Engaged couple defending each other through the murder probe."},
+        {"source": "Isabella Moore", "target": "Adrian Blackwood", "relationType": "former-lovers", "sentiment": 0.2, "weight": 4, "summary": "Past romantic history and mutual secret-keeping."},
+        {"source": "Inspector Robert Shaw", "target": "Grace Shaw", "relationType": "sibling", "sentiment": 0.7, "weight": 4, "summary": "Brother and sister; Grace confides the hidden vial."},
+        {"source": "Jonathan Blackwood", "target": "Lord Sebastian Blackwood", "relationType": "parent-child", "sentiment": 0.1, "weight": 3, "summary": "Biological father and unacknowledged missing son."},
+        {"source": "Jonathan Blackwood", "target": "Laura Price", "relationType": "spouse", "sentiment": 0.8, "weight": 4, "summary": "Devoted husband and wife supporting each other."},
+        {"source": "Helen Ward", "target": "Daniel Cross", "relationType": "sibling", "sentiment": 0.3, "weight": 3, "summary": "Sister and brother on opposite sides of Victor's legal challenge."},
+        {"source": "Helen Ward", "target": "Victor Hale", "relationType": "lawyer-client", "sentiment": -0.2, "weight": 4, "summary": "Attorney and client; Helen refuses unethical demands."},
+        {"source": "Margaret Blackwood", "target": "Catherine", "relationType": "aunt-niece", "sentiment": 0.8, "weight": 5, "summary": "Aunt who lovingly raised Catherine as a second mother."},
+        {"source": "Eleanor Price", "target": "Lord Sebastian Blackwood", "relationType": "former-lovers", "sentiment": 0.3, "weight": 3, "summary": "Former fiancée and mother of Jonathan Blackwood."}
     ]
 }
 

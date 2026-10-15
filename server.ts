@@ -1,8 +1,8 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
-import { GoogleGenAI, Type } from '@google/genai';
 import { spawn } from 'child_process';
 
 dotenv.config();
@@ -12,24 +12,99 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json({ limit: '25mb' }));
 
-// Initialize Gemini SDK with User-Agent as instructed by guidelines
-const apiKey = process.env.GEMINI_API_KEY;
-let ai: GoogleGenAI | null = null;
-if (apiKey) {
-  ai = new GoogleGenAI({
-    apiKey,
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
-      },
-    },
-  });
+// Determine Python binary across Windows and Unix (checks .venv first)
+function getPythonBin(): string {
+  if (process.env.PYTHON_BIN) return process.env.PYTHON_BIN;
+  const venvWin = path.resolve(process.cwd(), '.venv', 'Scripts', 'python.exe');
+  const venvPosix = path.resolve(process.cwd(), '.venv', 'bin', 'python');
+  if (process.platform === 'win32') {
+    return fs.existsSync(venvWin) ? venvWin : 'python';
+  }
+  return fs.existsSync(venvPosix) ? venvPosix : 'python3';
 }
 
-// Function to run Python graph engine
+
+// Persistent Python Engine Worker with Preloaded Model
+let pythonWorker: ReturnType<typeof spawn> | null = null;
+let pythonWorkerReady = false;
+const pendingWorkerRequests = new Map<string, (data: any) => void>();
+let workerRequestId = 0;
+let workerBuffer = '';
+
+function startPythonWorker() {
+  try {
+    const pythonBin = getPythonBin();
+    const scriptPath = path.resolve(process.cwd(), 'cres_engine.py');
+
+    console.log(`[CRES Server] Preloading fine-tuned model with Python (${pythonBin})...`);
+    pythonWorker = spawn(pythonBin, [scriptPath, '--server']);
+
+    pythonWorker.stdout?.on('data', (chunk) => {
+      workerBuffer += chunk.toString();
+      const lines = workerBuffer.split('\n');
+      workerBuffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        if (trimmed === 'READY') {
+          pythonWorkerReady = true;
+          console.log('⚡ [CRES Server] Local model is preloaded into memory & ready for instant inference!');
+          continue;
+        }
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (parsed.id && pendingWorkerRequests.has(parsed.id)) {
+            const resolve = pendingWorkerRequests.get(parsed.id)!;
+            pendingWorkerRequests.delete(parsed.id);
+            resolve(parsed.data || parsed);
+          }
+        } catch (err) {
+          // ignore non-json worker output
+        }
+      }
+    });
+
+    pythonWorker.stderr?.on('data', (chunk) => {
+      process.stderr.write(chunk.toString());
+    });
+
+    pythonWorker.on('close', (code) => {
+      if (code !== 0 && code !== null) {
+        console.warn(`[CRES Server] Python worker closed with code ${code}`);
+      }
+      pythonWorkerReady = false;
+      pythonWorker = null;
+    });
+
+    // Cleanup child process on server exit
+    process.on('exit', () => {
+      if (pythonWorker) pythonWorker.kill();
+    });
+    process.on('SIGINT', () => {
+      if (pythonWorker) pythonWorker.kill();
+      process.exit();
+    });
+  } catch (err) {
+    console.warn('[CRES Server] Could not launch persistent Python worker, falling back to on-demand execution:', err);
+  }
+}
+
+// Function to run Python graph engine & local extraction
 function runPythonEngine(data: { characters?: any[]; relationships?: any[]; text?: string }): Promise<any> {
+  // Use warm persistent worker if ready
+  if (pythonWorker && pythonWorkerReady) {
+    return new Promise((resolve) => {
+      const id = `req_${++workerRequestId}_${Date.now()}`;
+      pendingWorkerRequests.set(id, resolve);
+      pythonWorker!.stdin?.write(JSON.stringify({ id, payload: data }) + '\n');
+    });
+  }
+
+  // Graceful fallback to on-demand process
   return new Promise((resolve) => {
-    const py = spawn('python3', [path.resolve(process.cwd(), 'cres_engine.py')]);
+    const pythonBin = getPythonBin();
+    const py = spawn(pythonBin, [path.resolve(process.cwd(), 'cres_engine.py')]);
     let output = '';
     let errorOutput = '';
 
@@ -43,16 +118,16 @@ function runPythonEngine(data: { characters?: any[]; relationships?: any[]; text
 
     py.on('close', (code) => {
       if (code !== 0) {
-        console.warn('Python engine error:', errorOutput);
-        resolve(data);
-      } else {
-        try {
-          const parsed = JSON.parse(output);
-          resolve(parsed);
-        } catch (e) {
+        console.warn('Python engine notice/error:', errorOutput);
+      }
+      try {
+        const parsed = JSON.parse(output);
+        resolve(parsed);
+      } catch (e) {
+        if (code !== 0) {
           console.warn('Failed to parse Python engine output:', e);
-          resolve(data);
         }
+        resolve(data);
       }
     });
 
@@ -65,18 +140,12 @@ function runPythonEngine(data: { characters?: any[]; relationships?: any[]; text
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    hasGeminiKey: !!process.env.GEMINI_API_KEY,
+    localModelReady: pythonWorkerReady,
+    engine: 'cres-flan-t5-literary-re',
   });
 });
 
-// Candidate models cascade for high-availability fallback
-const CANDIDATE_MODELS = [
-  'gemini-3.8-flash',
-  'gemini-3.1-flash-lite',
-  'gemini-flash-latest',
-];
-
-// Primary CRES Extraction endpoint
+// Primary CRES Extraction endpoint - Runs fine-tuned Flan-T5 model + NLTK pipeline
 app.post('/api/extract-relations', async (req, res) => {
   try {
     const { text } = req.body;
@@ -86,131 +155,28 @@ app.post('/api/extract-relations', async (req, res) => {
 
     const trimmedText = text.slice(0, 40000);
 
-    let rawCharacters: any[] = [];
-    let rawRelationships: any[] = [];
-    let modelUsed: string = 'python_fallback';
-
-    if (ai) {
-      const prompt = `You are an expert computational linguist executing the Character Relation Extraction System (CRES) pipeline on narrative literature.
-
-Carefully and exhaustively read through the ENTIRE story across ALL chapters (including all beginning, middle, and final chapters).
-
-TASK 1: EXHAUSTIVE CHARACTER & ALIAS EXTRACTION
-- Extract EVERY named sentient human character who speaks, acts, or holds narrative significance across the full text.
-- Do NOT omit characters who appear only in later chapters (e.g. John Price/Jonathan, Laura Price, Helen Ward, Grace Shaw, etc.).
-- Do NOT confuse family members sharing the same surname into one person (e.g., Margaret Blackwood, Sebastian Blackwood, Adrian Blackwood, and Elizabeth are distinct entities!).
-- Merge all surface nicknames, titles, and variants into the single full canonicalName, and list every variant in the "aliases" array.
-  * Examples of aliases: "Ade" -> Adrian Blackwood; "Cathy" -> Catherine; "Bella" -> Isabella Moore; "Inspector Shaw" -> Robert Shaw; "John Price" -> Jonathan Blackwood; "Lord Sebastian" -> Sebastian Blackwood.
-- Assign primaryRole (Protagonist, Antagonist, Supporting, Catalyst, Deuteragonist).
-- Assign gender (male, female, other, unknown).
-
-TASK 2: RELATIONSHIP CLASSIFICATION & EVIDENCE
-- Identify all meaningful interpersonal relationships and direct interactions between the characters.
-- Classify each relationType strictly into one of:
-  * "kinship" (spouses, siblings, parent-child, aunt/uncle-niece/nephew, in-laws, adoptive relations)
-  * "romantic" (lovers, fiancés, courting, unrequited/past affection)
-  * "adversarial" (enemies, rivals, murder suspects, legal antagonists, bitter feuds)
-  * "hierarchical" (lawyer-client, doctor-patient, employer-secretary, inspector-witness)
-  * "alliance" (trusted friends, conspirators, mutual confidants)
-  * "neutral_interaction" (casual formal acquaintance)
-- Sentiment Polarity: Float between -1.0 (intensely hostile/hateful) and +1.0 (deeply loving/supportive). 0.0 is neutral/formal.
-- Interaction Weight: Integer from 1 to 10 reflecting narrative frequency and emotional intensity.
-- Evidence Quotes: Include 1 to 2 EXACT verbatim quote snippets from the narrative text demonstrating the relation.
-- Summary: A concise 1-sentence description of their dynamic across the story.
-
-NARRATIVE STORY:
-"""
-${trimmedText}
-"""
-`;
-
-      const responseSchema = {
-        type: Type.OBJECT,
-        properties: {
-          characters: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                id: { type: Type.STRING },
-                canonicalName: { type: Type.STRING, description: 'Full canonical name of the character' },
-                aliases: {
-                  type: Type.ARRAY,
-                  items: { type: Type.STRING },
-                  description: 'All nicknames, diminutives, and surface forms',
-                },
-                gender: { type: Type.STRING },
-                primaryRole: { type: Type.STRING },
-                description: { type: Type.STRING },
-              },
-              required: ['id', 'canonicalName', 'aliases', 'primaryRole'],
-            },
-          },
-          relationships: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                source: { type: Type.STRING, description: 'canonicalName of first character' },
-                target: { type: Type.STRING, description: 'canonicalName of second character' },
-                relationType: { type: Type.STRING, description: 'kinship, romantic, adversarial, hierarchical, alliance, or neutral_interaction' },
-                sentiment: { type: Type.NUMBER, description: 'Float between -1.0 and 1.0' },
-                weight: { type: Type.INTEGER, description: 'Integer from 1 to 10' },
-                evidenceQuotes: {
-                  type: Type.ARRAY,
-                  items: { type: Type.STRING },
-                  description: 'Verbatim quotes from story text',
-                },
-                summary: { type: Type.STRING },
-              },
-              required: ['source', 'target', 'relationType', 'sentiment', 'weight', 'evidenceQuotes', 'summary'],
-            },
-          },
-        },
-        required: ['characters', 'relationships'],
-      };
-
-      for (const model of CANDIDATE_MODELS) {
-        try {
-          const response = await ai.models.generateContent({
-            model,
-            contents: prompt,
-            config: {
-              responseMimeType: 'application/json',
-              responseSchema,
-            },
-          });
-
-          const parsedLLM = JSON.parse(response.text || '{}');
-          if (Array.isArray(parsedLLM.characters) && parsedLLM.characters.length > 0) {
-            rawCharacters = parsedLLM.characters;
-            rawRelationships = parsedLLM.relationships || [];
-            modelUsed = model;
-            break;
-          }
-        } catch (modelErr: any) {
-          console.warn(`Model ${model} was unavailable or spiked, falling back:`, modelErr.message);
-        }
-      }
-    }
-
-    // Process graph metrics and community factions in Python
+    // Process extraction with local fine-tuned model (cres-flan-t5-literary-re)
     const pythonResult = await runPythonEngine({
-      characters: rawCharacters,
-      relationships: rawRelationships,
-      text: rawCharacters.length === 0 ? trimmedText : undefined,
+      characters: [],
+      relationships: [],
+      text: trimmedText,
     });
 
+    const finalCharacters = pythonResult.characters || [];
+    const finalRelationships = pythonResult.relationships || [];
+    const finalModelUsed = pythonResult.modelUsed || 'cres-flan-t5-literary-re';
+
     res.json({
-      characters: pythonResult.characters || rawCharacters,
-      relationships: pythonResult.relationships || rawRelationships,
+      characters: finalCharacters,
+      relationships: finalRelationships,
       communities: pythonResult.communities || [],
-      modelUsed,
+      modelUsed: finalModelUsed,
+      nlpStats: pythonResult.nlpStats || null,
       metrics: pythonResult.metrics || {
-        nodeCount: rawCharacters.length,
-        edgeCount: rawRelationships.length,
-        topHub: rawCharacters[0]?.canonicalName || 'None',
-        topBridge: rawCharacters[0]?.canonicalName || 'None',
+        nodeCount: finalCharacters.length,
+        edgeCount: finalRelationships.length,
+        topHub: finalCharacters[0]?.canonicalName || 'None',
+        topBridge: finalCharacters[0]?.canonicalName || 'None',
       },
     });
   } catch (err: unknown) {
@@ -220,8 +186,12 @@ ${trimmedText}
   }
 });
 
+
 // Mount Vite or static server
 async function startServer() {
+  // Pre-load the fine-tuned Flan-T5 model immediately at server startup
+  startPythonWorker();
+
   const isProd = process.env.NODE_ENV === 'production';
   if (!isProd) {
     const vite = await createViteServer({

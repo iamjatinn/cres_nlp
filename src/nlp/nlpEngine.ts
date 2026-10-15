@@ -63,41 +63,62 @@ const COMMON_NICKNAMES: Record<string, string[]> = {
   bennet: ['elizabeth', 'jane', 'lydia', 'kitty', 'mary'],
 };
 
-// Relation cue dictionaries
-const RELATION_PATTERNS = {
-  kinship: [
-    'father', 'mother', 'sister', 'brother', 'daughter', 'son', 'uncle', 'aunt',
-    'cousin', 'wife', 'husband', 'nephew', 'niece', 'parent', 'child', 'family',
-    'ancestor', 'kin', 'sibling', 'born to', 'begot', 'blood', 'clan', 'in-law',
-    'stepmother', 'stepfather', 'stepson', 'stepdaughter', 'half-brother',
-  ],
-  romantic: [
-    'love', 'loved', 'loves', 'loving', 'marry', 'married', 'marriage', 'wedding',
-    'kiss', 'kissed', 'kissing', 'passion', 'heart', 'darling', 'beloved',
-    'sweetheart', 'betrothed', 'fiancé', 'fiancée', 'suitor', 'courtship', 'courted',
-    'adored', 'fond', 'smitten', 'infatuated', 'romance', 'proposal', 'proposed',
-    'passionately', 'embraced', 'tenderly',
-  ],
-  adversarial: [
-    'kill', 'killed', 'killing', 'murder', 'murdered', 'hated', 'hate', 'hates',
-    'foe', 'enemy', 'enemies', 'despised', 'attacked', 'attack', 'struck',
-    'stabbed', 'poisoned', 'betrayed', 'betrayal', 'revenge', 'avenge', 'duel',
-    'duelled', 'conspired', 'plot', 'plotting', 'quarrel', 'quarreled', 'scorned',
-    'rival', 'rivalry', 'threatened', 'furious', 'rage', 'wrath', 'fight', 'fought',
-    'traitor', 'nemesis', 'detest', 'vengeance',
-  ],
-  hierarchical: [
-    'master', 'servant', 'lord', 'ruler', 'king', 'queen', 'majesty', 'highness',
-    'subordinate', 'patron', 'commanded', 'command', 'obeyed', 'obey', 'fealty',
-    'knight', 'liege', 'mentor', 'student', 'apprentice', 'boss', 'superior',
-    'subject', 'serves', 'served', 'duty', 'vassal',
-  ],
-  alliance: [
-    'friend', 'friends', 'friendship', 'ally', 'allies', 'alliance', 'confidant',
-    'comrade', 'partner', 'companion', 'confided', 'supported', 'support',
-    'accompanied', 'trusted', 'trust', 'fellow', 'loyal', 'solidarity', 'aided',
-    'comforted', 'shielded', 'stood with',
-  ],
+// Fine-grained relation cue dictionaries
+// Each key is the fine-grained label the system will output.
+const RELATION_PATTERNS: Record<string, string[]> = {
+  // ── KINSHIP ──────────────────────────────────────────────────────────────
+  sibling:              ['sister', 'brother', 'siblings', 'twin', 'half-brother', 'half-sister'],
+  'parent-child':       ['father', 'mother', 'daughter', 'son', 'born to', 'begot', 'parent', 'child'],
+  spouse:               ['wife', 'husband', 'married', 'marriage', 'wedding', 'wedded', 'widower', 'widow'],
+  cousin:               ['cousin'],
+  'uncle-nephew':       ['uncle', 'nephew'],
+  'aunt-niece':         ['aunt', 'niece'],
+  'adoptive-parent':    ['adopted', 'adoptive', 'ward', 'guardian'],
+  'step-parent':        ['stepmother', 'stepfather', 'step-parent', 'stepson', 'stepdaughter'],
+  'grandparent-grandchild': ['grandmother', 'grandfather', 'grandchild', 'grandson', 'granddaughter'],
+  // ── ROMANTIC ─────────────────────────────────────────────────────────────
+  lovers:               ['love', 'loved', 'loves', 'passion', 'heart', 'darling', 'beloved',
+                         'sweetheart', 'adored', 'smitten', 'infatuated', 'romance',
+                         'passionately', 'embraced', 'tenderly', 'kiss', 'kissed'],
+  betrothed:            ['betrothed', 'fiancé', 'fiancée', 'engaged', 'engagement', 'proposal', 'proposed'],
+  'former-lovers':      ['former', 'once loved', 'past affection', 'unrequited', 'ex-'],
+  courtship:            ['courted', 'courtship', 'suitor', 'wooed', 'pursuing'],
+  // ── ADVERSARIAL ───────────────────────────────────────────────────────────
+  enemy:                ['enemy', 'enemies', 'hated', 'hate', 'despised', 'foe', 'despise', 'detest'],
+  rival:                ['rival', 'rivalry', 'competed', 'compete', 'outdo', 'jealousy', 'jealous'],
+  nemesis:              ['nemesis', 'revenge', 'avenge', 'vengeance', 'obsession'],
+  'betrayer-betrayed':  ['betrayed', 'betrayal', 'traitor', 'treachery', 'deceived', 'falseness'],
+  // ── HIERARCHICAL ─────────────────────────────────────────────────────────
+  'employer-employee':  ['employed', 'hired', 'secretary', 'assistant', 'staff', 'worker', 'boss'],
+  'master-servant':     ['master', 'servant', 'serves', 'served', 'obey', 'obeyed', 'fealty', 'vassal'],
+  'mentor-student':     ['mentor', 'student', 'apprentice', 'pupil', 'taught', 'teacher', 'disciple'],
+  'lawyer-client':      ['lawyer', 'attorney', 'client', 'counsel', 'solicitor', 'barrister'],
+  'doctor-patient':     ['doctor', 'patient', 'physician', 'treated', 'medicine', 'diagnosis'],
+  'lord-subject':       ['lord', 'liege', 'knight', 'vassal', 'king', 'queen', 'majesty', 'highness',
+                         'commanded', 'command', 'fealty', 'subject', 'ruler'],
+  // ── ALLIANCE ─────────────────────────────────────────────────────────────
+  friend:               ['friend', 'friends', 'friendship', 'comrade', 'companion',
+                         'trusted', 'trust', 'loyal', 'solidarity', 'stood with'],
+  confidant:            ['confided', 'confidant', 'secret', 'whispered', 'confess'],
+  ally:                 ['ally', 'allies', 'alliance', 'partner', 'aided', 'supported', 'support'],
+  'co-conspirator':     ['conspired', 'plot', 'plotting', 'scheme', 'scheming', 'together planned'],
+  // ── NEUTRAL ──────────────────────────────────────────────────────────────
+  acquaintance:         ['acquaintance', 'met', 'encounter', 'introduced', 'knew briefly'],
+  colleague:            ['colleague', 'fellow', 'peer', 'associate', 'co-worker'],
+};
+
+// Map fine-grained label → coarse display group (for summary generation only)
+const FINE_TO_COARSE: Record<string, string> = {
+  sibling: 'kinship', 'parent-child': 'kinship', spouse: 'kinship',
+  cousin: 'kinship', 'uncle-nephew': 'kinship', 'aunt-niece': 'kinship',
+  'adoptive-parent': 'kinship', 'step-parent': 'kinship', 'grandparent-grandchild': 'kinship',
+  lovers: 'romantic', betrothed: 'romantic', 'former-lovers': 'romantic', courtship: 'romantic',
+  enemy: 'adversarial', rival: 'adversarial', nemesis: 'adversarial', 'betrayer-betrayed': 'adversarial',
+  'employer-employee': 'hierarchical', 'master-servant': 'hierarchical',
+  'mentor-student': 'hierarchical', 'lawyer-client': 'hierarchical',
+  'doctor-patient': 'hierarchical', 'lord-subject': 'hierarchical',
+  friend: 'alliance', confidant: 'alliance', ally: 'alliance', 'co-conspirator': 'alliance',
+  acquaintance: 'neutral_interaction', colleague: 'neutral_interaction',
 };
 
 // Valence lexicon for sentiment scoring
@@ -574,34 +595,29 @@ export function classifyRelationships(
     // Join all snippets for text analysis
     const combinedText = entry.snippets.join(' ').toLowerCase();
 
-    // Pattern matching scores
-    const categoryScores: Record<RelationCategory, number> = {
-      kinship: 0,
-      romantic: 0,
-      adversarial: 0,
-      hierarchical: 0,
-      alliance: 0,
-      neutral_interaction: 0.1, // Base default
-    };
+    // Pattern matching scores — one entry per fine-grained label
+    const categoryScores: Record<string, number> = { acquaintance: 0.1 }; // base default
+    for (const label of Object.keys(RELATION_PATTERNS)) {
+      if (!(label in categoryScores)) categoryScores[label] = 0;
+    }
 
-    for (const [cat, words] of Object.entries(RELATION_PATTERNS) as [RelationCategory, string[]][]) {
+    for (const [label, words] of Object.entries(RELATION_PATTERNS)) {
       for (const word of words) {
-        // Regex for whole-word presence
-        const regex = new RegExp(`\\b${word}\\b`, 'gi');
+        const regex = new RegExp(`\\b${word.replace('-', '\\-')}\\b`, 'gi');
         const matches = combinedText.match(regex);
         if (matches) {
-          categoryScores[cat] += matches.length * 1.5;
+          categoryScores[label] += matches.length * 1.5;
         }
       }
     }
 
-    // Determine top relation category
-    let bestCategory: RelationCategory = 'neutral_interaction';
+    // Pick the highest-scoring fine-grained label
+    let bestCategory: string = 'acquaintance';
     let maxCatScore = 0;
-    for (const [cat, score] of Object.entries(categoryScores) as [RelationCategory, number][]) {
+    for (const [label, score] of Object.entries(categoryScores)) {
       if (score > maxCatScore) {
         maxCatScore = score;
-        bestCategory = cat;
+        bestCategory = label;
       }
     }
 
@@ -614,9 +630,11 @@ export function classifyRelationships(
       if (NEGATIVE_LEXICON.has(t)) negScore += 1;
     }
 
-    // Adversarial category carries heavy negative bias
-    if (bestCategory === 'adversarial') negScore += 3;
-    if (bestCategory === 'romantic' || bestCategory === 'alliance') posScore += 3;
+    // Sentiment bias based on coarse group
+    const coarseGroup = FINE_TO_COARSE[bestCategory] || 'neutral_interaction';
+    if (coarseGroup === 'adversarial') negScore += 3;
+    if (coarseGroup === 'romantic' || coarseGroup === 'alliance') posScore += 3;
+    if (coarseGroup === 'kinship') posScore += 1;
 
     let sentiment = 0;
     const totalSentimentTokens = posScore + negScore;
@@ -624,13 +642,13 @@ export function classifyRelationships(
       sentiment = +((posScore - negScore) / totalSentimentTokens).toFixed(2);
     }
 
-    // Directionality heuristic
+    // Directionality heuristic — based on coarse group
     let directionality: Directionality = 'undirected';
-    if (bestCategory === 'hierarchical') {
+    if (coarseGroup === 'hierarchical') {
       directionality = 'directed';
-    } else if (bestCategory === 'romantic' && sentiment < 0) {
+    } else if (coarseGroup === 'romantic' && sentiment < 0) {
       directionality = 'directed';
-    } else if (bestCategory === 'adversarial' && Math.random() > 0.5) {
+    } else if (coarseGroup === 'adversarial' && Math.random() > 0.5) {
       directionality = 'bidirectional';
     }
 
@@ -641,18 +659,19 @@ export function classifyRelationships(
     const union = sourceParas + targetParas - intersection;
     const jaccardScore = union > 0 ? +(intersection / union).toFixed(3) : 0;
 
-    // Generate concise summary
+    // Generate summary using fine-grained label
+    const labelDisplay = bestCategory.replace(/-/g, ' ');
     let summary = `${sourceChar.canonicalName} and ${targetChar.canonicalName} interact across ${entry.count} narrative scenes.`;
-    if (bestCategory === 'kinship') {
-      summary = `Kinship connection between ${sourceChar.canonicalName} and ${targetChar.canonicalName}.`;
-    } else if (bestCategory === 'romantic') {
-      summary = `Romantic or courtship bond between ${sourceChar.canonicalName} and ${targetChar.canonicalName}.`;
-    } else if (bestCategory === 'adversarial') {
-      summary = `Adversarial conflict and friction between ${sourceChar.canonicalName} and ${targetChar.canonicalName}.`;
-    } else if (bestCategory === 'hierarchical') {
-      summary = `Hierarchical or authority dynamic between ${sourceChar.canonicalName} and ${targetChar.canonicalName}.`;
-    } else if (bestCategory === 'alliance') {
-      summary = `Allied partnership and mutual trust between ${sourceChar.canonicalName} and ${targetChar.canonicalName}.`;
+    if (coarseGroup === 'kinship') {
+      summary = `${sourceChar.canonicalName} and ${targetChar.canonicalName} share a ${labelDisplay} relationship.`;
+    } else if (coarseGroup === 'romantic') {
+      summary = `${sourceChar.canonicalName} and ${targetChar.canonicalName} are connected by a ${labelDisplay} bond.`;
+    } else if (coarseGroup === 'adversarial') {
+      summary = `${sourceChar.canonicalName} and ${targetChar.canonicalName} are in a ${labelDisplay} conflict.`;
+    } else if (coarseGroup === 'hierarchical') {
+      summary = `${sourceChar.canonicalName} and ${targetChar.canonicalName} share a ${labelDisplay} dynamic.`;
+    } else if (coarseGroup === 'alliance') {
+      summary = `${sourceChar.canonicalName} and ${targetChar.canonicalName} share a ${labelDisplay} partnership.`;
     }
 
     edges.push({
